@@ -9,7 +9,7 @@ header("Content-Type: application/json; charset=UTF-8");
 // Validate if there is a GET request
 if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     // Query to get product name and price
-    $sql = "SELECT gambar, nama_produk, harga FROM produk";
+    $sql = "SELECT gambar, nama_produk, harga FROM produkk";
     $result = $conn->query($sql);
 
     // Check if there are results

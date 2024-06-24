@@ -19,7 +19,7 @@ if (isset($data['email']) && isset($data['paket']) && isset($data['harga']) && i
     $harga = $data['harga'];
     $tanggal_pembelian = $data['tanggalBeli'];
 
-    $sql = "INSERT INTO transaksi (email, paket, harga, tanggalBeli) VALUES ('$email', '$nama_produk', $harga, '$tanggal_pembelian')";
+    $sql = "INSERT INTO transaksii (email, paket, harga, tanggalBeli) VALUES ('$email', '$nama_produk', $harga, '$tanggal_pembelian')";
 
     if ($conn->query($sql) === TRUE) {
         echo json_encode(["message" => "Transaksi berhasil disimpan"]);

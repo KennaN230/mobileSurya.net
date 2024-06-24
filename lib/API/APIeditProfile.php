@@ -1,5 +1,7 @@
 <?php
+header("Access-Control-Allow-Origin: *");
 header("Content-Type: application/json");
+header("Accept: */*");
 
 require_once 'lokal.php'; // Sesuaikan dengan file koneksi database Anda
 
@@ -30,59 +32,65 @@ $phone = $_POST['noTelp'];
 $gender = $_POST['jenisKelamin'];
 $address = $_POST['alamat'];
 
-$upload_dir = 'C:/xampp/htdocs/surya4/assets/images/person/';
-$image_path = $upload_dir . basename($_FILES['profile_image']['name']);
-$image_file_type = strtolower(pathinfo($image_path, PATHINFO_EXTENSION));
+$upload_dir = 'C:/xampp/htdocs/surya4/assets/images/person/'; // Sesuaikan dengan lokasi penyimpanan gambar Anda
+$profile_image_url = null;
 
-// Batasi jenis file
-$allowed_file_types = ['jpg', 'png', 'jpeg', 'gif'];
+if (isset($_FILES['profile_image']) && $_FILES['profile_image']['size'] > 0) {
+    $image_path = $upload_dir . basename($_FILES['profile_image']['name']);
+    $image_file_type = strtolower(pathinfo($image_path, PATHINFO_EXTENSION));
 
-$image_uploaded = false;
-if (isset($_FILES['profile_image'])) {
-    // Periksa apakah file sudah ada
-    if (file_exists($image_path)) {
-        $image_uploaded = false;
+    // Batasi jenis file
+    $allowed_file_types = ['jpg', 'png', 'jpeg', 'gif'];
+
+    // Periksa ukuran file
+    if ($_FILES['profile_image']['size'] > 500000) {
+        die(json_encode(["error" => "File is too large"]));
+    }
+
+    // Batasi jenis file
+    if (!in_array($image_file_type, $allowed_file_types)) {
+        die(json_encode(["error" => "Only JPG, JPEG, PNG & GIF files are allowed"]));
+    }
+
+    // Coba unggah file
+    if (move_uploaded_file($_FILES['profile_image']['tmp_name'], $image_path)) {
+        $profile_image_url = basename($_FILES['profile_image']['name']);
     } else {
-        // Periksa ukuran file
-        if ($_FILES['profile_image']['size'] > 500000) {
-            die(json_encode(["error" => "File is too large"]));
-        }
-
-        // Batasi jenis file
-        if (!in_array($image_file_type, $allowed_file_types)) {
-            die(json_encode(["error" => "Only JPG, JPEG, PNG & GIF files are allowed"]));
-        }
-
-        // Coba unggah file
-        if (move_uploaded_file($_FILES['profile_image']['tmp_name'], $image_path)) {
-            $image_uploaded = true;
-        } else {
-            die(json_encode(["error" => "There was an error uploading your file"]));
-        }
+        die(json_encode(["error" => "There was an error uploading your file"]));
     }
 }
 
-// Simpan path gambar di database jika berhasil diunggah
-$profile_image_url = $image_uploaded ? basename($_FILES['profile_image']['name']) : null;
+$sql = "UPDATE konsumenn SET nama = ?, tanggalLahir = ?, noTelp = ?, jenisKelamin = ?, alamat = ?";
+$params = [$name, $dob, $phone, $gender, $address];
 
-if ($profile_image_url) {
-    $sql = "UPDATE konsumen SET nama = ?, tanggalLahir = ?, noTelp = ?, jenisKelamin = ?, alamat = ?, profile_image = ? WHERE email = ?";
-    $stmt = $conn->prepare($sql);
-    if (!$stmt) {
-        die(json_encode(["error" => "Prepare statement failed: " . $conn->error]));
-    }
-    $stmt->bind_param("sssssss", $name, $dob, $phone, $gender, $address, $profile_image_url, $email);
-} else {
-    $sql = "UPDATE konsumen SET nama = ?, tanggalLahir = ?, noTelp = ?, jenisKelamin = ?, alamat = ? WHERE email = ?";
-    $stmt = $conn->prepare($sql);
-    if (!$stmt) {
-        die(json_encode(["error" => "Prepare statement failed: " . $conn->error]));
-    }
-    $stmt->bind_param("ssssss", $name, $dob, $phone, $gender, $address, $email);
+// Jika profile_image_url tidak null, tambahkan ke query update
+if ($profile_image_url !== null) {
+    $sql .= ", profile_image = ?";
+    $params[] = $profile_image_url;
 }
+
+$sql .= " WHERE email = ?";
+$params[] = $email;
+
+$stmt = $conn->prepare($sql);
+if (!$stmt) {
+    die(json_encode(["error" => "Prepare statement failed: " . $conn->error]));
+}
+
+// Bind parameter dan eksekusi statement
+$bind_types = str_repeat('s', count($params)); // Sesuaikan jenis data
+$stmt->bind_param($bind_types, ...$params);
 
 if ($stmt->execute()) {
-    echo json_encode(["success" => "Record updated successfully"]);
+    $updatedData = [
+        "nama" => $name,
+        "tanggalLahir" => $dob,
+        "noTelp" => $phone,
+        "jenisKelamin" => $gender,
+        "alamat" => $address,
+        "profile_image" => $profile_image_url // Jika ada
+    ];
+    echo json_encode(["success" => "Record updated successfully", "data" => $updatedData]);
 } else {
     echo json_encode(["error" => "Error updating record: " . $stmt->error]);
 }

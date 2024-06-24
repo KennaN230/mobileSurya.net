@@ -62,7 +62,7 @@ class _ProfilePageState extends State<ProfilePage> {
           phone: profileData['noTelp'] ?? '',
           gender: profileData['jenisKelamin'] ?? '',
           address: profileData['alamat'] ?? '',
-          imageUrl: profileData['profile_image'] ?? '',
+          imageUrl: profileData['profile_image'] ?? '', initialImageUrl: '',
         ),
       ),
     );
@@ -109,7 +109,7 @@ class _ProfilePageState extends State<ProfilePage> {
                 ? (profileData['profile_image']!.startsWith('http')
                     ? profileData['profile_image']
                     : 'assets/images/person/${profileData['profile_image']}')
-                : 'assets/images/person/person.png';
+                : 'assets/images/person/login.png';
 
             return ListView(
               padding: const EdgeInsets.all(16),

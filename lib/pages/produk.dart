@@ -130,8 +130,8 @@ class _DashboardPageState extends State<DB> {
                                   child: Column(
                                     mainAxisAlignment: MainAxisAlignment.center,
                                     children: [
-                                      Image.network(
-                                        'http://192.168.100.31/surya4/assets/images/${product.imageUrl}',
+                                      Image.asset(
+                                        'assets/images/${product.imageUrl}',
                                         height: 100,
                                         width: 100,
                                         fit: BoxFit.cover,
@@ -206,8 +206,10 @@ class _DashboardPageState extends State<DB> {
         return 'assets/images/wifi1.jpeg';
       case 'Paket 2':
         return 'assets/images/wifi2.jpeg';
-      default:
+      case 'Paket 3':
         return 'assets/images/wifi3.jpeg';
+      default:
+        return 'assets/images/wifi.jpeg';
     }
   }
 }

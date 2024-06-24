@@ -11,7 +11,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $email = $conn->real_escape_string($_POST['email']);
 
     // Query untuk mendapatkan data konsumen berdasarkan email
-    $sql = "SELECT nama, noTelp, tanggalLahir, jenisKelamin, alamat, profile_image FROM konsumen WHERE email = '$email'";
+    $sql = "SELECT nama, noTelp, tanggalLahir, jenisKelamin, alamat, profile_image FROM konsumenn WHERE email = '$email'";
     $result = $conn->query($sql);
 
     // Cek jika ada hasil

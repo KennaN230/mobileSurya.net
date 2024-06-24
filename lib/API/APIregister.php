@@ -21,13 +21,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $alamat = mysqli_real_escape_string($conn, $_POST["alamat"]);
 
     // Check if email already exists
-    $checkEmailQuery = "SELECT * FROM konsumen WHERE email = '$email'";
+    $checkEmailQuery = "SELECT * FROM konsumenn WHERE email = '$email'";
     $result = $conn->query($checkEmailQuery);
 
     if ($result->num_rows > 0) {
         echo json_encode(array('status' => 'fail', 'message' => 'Email already registered'));
     } else {
-        $insertQuery = "INSERT INTO konsumen (email, nama, noTelp, password, tanggalLahir, jenisKelamin, alamat) VALUES ('$email', '$nama', '$noTelp', '$password', '$tanggalLahir', '$jenisKelamin', '$alamat')";
+        $insertQuery = "INSERT INTO konsumenn (email, nama, noTelp, password, tanggalLahir, jenisKelamin, alamat) VALUES ('$email', '$nama', '$noTelp', '$password', '$tanggalLahir', '$jenisKelamin', '$alamat')";
 
         if ($conn->query($insertQuery) === TRUE) {
             echo json_encode(array('status' => 'success', 'message' => 'Registration successful'));

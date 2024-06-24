@@ -14,7 +14,7 @@ if (isset($_SERVER['REQUEST_METHOD']) && $_SERVER['REQUEST_METHOD'] === 'POST') 
     $username = mysqli_real_escape_string($conn, $_POST["email"]);
     $password = mysqli_real_escape_string($conn, $_POST["password"]);
 
-    $query = "SELECT * FROM konsumen WHERE email = '$username' AND password = '$password'";
+    $query = "SELECT * FROM konsumenn WHERE email = '$username' AND password = '$password'";
     $result = $conn->query($query);
 
     if ($result->num_rows === 1) {

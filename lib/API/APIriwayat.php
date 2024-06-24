@@ -14,7 +14,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $email = $conn->real_escape_string($_POST['email']);
 
         // Query to get transaction history based on email
-        $sql = "SELECT paket, harga, tanggalBeli FROM transaksi WHERE email = ?";
+        $sql = "SELECT paket, harga, tanggalBeli FROM transaksii WHERE email = ?";
         $stmt = $conn->prepare($sql);
         $stmt->bind_param('s', $email);
         $stmt->execute();

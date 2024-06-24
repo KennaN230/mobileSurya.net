@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 
 import 'package:surya4/pages/dasboard.dart';
+import 'package:surya4/pages/lupaPassword.dart';
 
 class WelcomePage extends StatelessWidget {
   const WelcomePage({Key? key}) : super(key: key);
@@ -61,6 +62,48 @@ class WelcomePage extends StatelessWidget {
   }
 }
 
+class LupaPasswordPage extends StatelessWidget {
+  const LupaPasswordPage({Key? key}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text('Lupa Password'),
+      ),
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(
+              'Masukkan alamat email untuk reset password',
+              style: TextStyle(fontSize: 18),
+            ),
+            const SizedBox(height: 20),
+            Container(
+              width: 250,
+              child: TextFormField(
+                decoration: InputDecoration(
+                  hintText: 'Email',
+                  border: OutlineInputBorder(),
+                ),
+                keyboardType: TextInputType.emailAddress,
+              ),
+            ),
+            const SizedBox(height: 20),
+            ElevatedButton(
+              onPressed: () {
+                // Logika untuk mengirim permintaan reset password
+                // Bisa ditambahkan di sini atau dengan memanggil fungsi dari luar
+              },
+              child: Text('Reset Password'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
 class LoginForm extends StatefulWidget {
   @override
   _LoginFormState createState() => _LoginFormState();
@@ -179,7 +222,20 @@ class _LoginFormState extends State<LoginForm> {
                   )
                 : const Text('LOGIN'),
           ),
-        ),
+        ), 
+        TextButton(
+  onPressed: () {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => ForgotPasswordPage()),
+    );
+  },
+  child: Text(
+    'Lupa Password?',
+    style: TextStyle(color: Colors.blue),
+  ),
+),
+
         if (_errorMessage.isNotEmpty)
           Padding(
             padding: const EdgeInsets.only(top: 16.0),
@@ -261,6 +317,8 @@ class _RegisterPageState extends State<RegisterPage> {
       }
     }
   }
+
+  
 
   @override
   Widget build(BuildContext context) {

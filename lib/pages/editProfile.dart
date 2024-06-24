@@ -1,10 +1,10 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:http/http.dart' as http;
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:http_parser/http_parser.dart';
 
 class EditProfilePage extends StatefulWidget {
   final String email;
@@ -13,7 +13,7 @@ class EditProfilePage extends StatefulWidget {
   final String phone;
   final String gender;
   final String address;
-  final String imageUrl;
+  final String initialImageUrl;
 
   const EditProfilePage({
     Key? key,
@@ -23,7 +23,7 @@ class EditProfilePage extends StatefulWidget {
     required this.phone,
     required this.gender,
     required this.address,
-    required this.imageUrl,
+    required this.initialImageUrl, required imageUrl,
   }) : super(key: key);
 
   @override
@@ -36,10 +36,10 @@ class _EditProfilePageState extends State<EditProfilePage> {
   late TextEditingController _phoneController;
   late TextEditingController _genderController;
   late TextEditingController _addressController;
-  late Future<String> _loggedInEmail;
   final _formKey = GlobalKey<FormState>();
   File? _profileImage;
   String _errorMessage = '';
+  late String _imageUrl;
 
   @override
   void initState() {
@@ -49,12 +49,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
     _phoneController = TextEditingController(text: widget.phone);
     _genderController = TextEditingController(text: widget.gender);
     _addressController = TextEditingController(text: widget.address);
-    _loggedInEmail = _loadLoggedInEmail();
-  }
-
-  Future<String> _loadLoggedInEmail() async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    return prefs.getString('user_email') ?? '';
+    _imageUrl = widget.initialImageUrl;
   }
 
   @override
@@ -76,33 +71,63 @@ class _EditProfilePageState extends State<EditProfilePage> {
     }
   }
 
-  Future<void> _uploadImage() async {
-    if (_profileImage == null) return;
+  Future<void> updateProfile() async {
+    try {
+      var url = Uri.parse('http://192.168.100.31/surya4/lib/API/APIeditProfile.php');
+      var request = http.MultipartRequest('POST', url);
+      request.fields['email'] = widget.email;
+      request.fields['nama'] = _nameController.text;
+      request.fields['tanggalLahir'] = _dobController.text;
+      request.fields['noTelp'] = _phoneController.text;
+      request.fields['jenisKelamin'] = _genderController.text;
+      request.fields['alamat'] = _addressController.text;
 
-    final uri = Uri.parse('http://192.168.100.31/surya4/lib/API/APIeditProfile.php');
-    final request = http.MultipartRequest('POST', uri)
-      ..fields['email'] = widget.email
-      ..fields['nama'] = _nameController.text
-      ..fields['tanggalLahir'] = _dobController.text
-      ..fields['noTelp'] = _phoneController.text
-      ..fields['jenisKelamin'] = _genderController.text
-      ..fields['alamat'] = _addressController.text;
+      if (_profileImage != null) {
+        request.files.add(await http.MultipartFile.fromPath('profile_image', _profileImage!.path,
+            contentType: MediaType('image', 'jpeg'))); // Ubah contentType jika diperlukan
+      }
 
-    if (_profileImage != null) {
-      request.files.add(await http.MultipartFile.fromPath(
-        'profile_image',
-        _profileImage!.path,
-      ));
+      var response = await request.send();
+      var responseData = await response.stream.bytesToString();
+
+      // Memeriksa kode status respons
+      print('Kode status respons: ${response.statusCode}');
+      // Menampilkan isi respons dari server
+      print('Isi respons: $responseData');
+
+      if (response.statusCode == 200) {
+        var decodedData = jsonDecode(responseData);
+        // Jika respons mengandung kunci 'success', menampilkan notifikasi sukses
+        if (decodedData.containsKey('success')) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Profil berhasil diperbarui')),
+          );
+        }
+        // Jika respons mengandung kunci 'error', menampilkan pesan error
+        else if (decodedData.containsKey('error')) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Error: ${decodedData['error']}')),
+          );
+        }
+        // Jika format respons tidak sesuai yang diharapkan
+        else {
+          _handleError('Format respons tidak terduga');
+        }
+      }
+      // Jika respons tidak berhasil (kode status selain 200)
+      else {
+        _handleError('Gagal memperbarui profil. Kode status: ${response.statusCode}');
+      }
     }
+    // Menangani eksepsi yang mungkin terjadi selama proses update
+    catch (e) {
+      _handleError('Exception: $e');
+    }
+  }
 
-    final response = await request.send();
-
-    if (response.statusCode == 200) {
-      // Data berhasil diupdate, lakukan sesuatu jika perlu
-      print('Profile updated successfully');
-    } else {
-      // Handle error jika request gagal
-      _handleError('Failed to update profile');
+  void _saveProfile() {
+    if (_formKey.currentState!.validate()) {
+      updateProfile();
     }
   }
 
@@ -110,15 +135,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
     setState(() {
       _errorMessage = errorMessage;
     });
-  }
-
-  void _saveProfile() {
-    if (_formKey.currentState!.validate()) {
-      _uploadImage().then((_) {
-        // Tambahkan navigasi kembali ke halaman profil
-        // Navigator.pop(context);
-      });
-    }
+    print('Error: $errorMessage');
   }
 
   @override
@@ -135,117 +152,107 @@ class _EditProfilePageState extends State<EditProfilePage> {
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
-        child: FutureBuilder<String>(
-          future: _loggedInEmail,
-          builder: (context, snapshot) {
-            if (snapshot.connectionState == ConnectionState.waiting) {
-              return Center(child: CircularProgressIndicator());
-            } else if (snapshot.hasError) {
-              return Center(child: Text('Error loading email'));
-            } else {
-              return Form(
-                key: _formKey,
-                child: ListView(
-                  children: [
-                    Center(
-                      child: GestureDetector(
-                        onTap: _pickImage,
-                        child: CircleAvatar(
-                          radius: 50,
-                          backgroundColor: Colors.grey[200],
-                          backgroundImage: _profileImage != null
-                              ? FileImage(_profileImage!)
-                              : NetworkImage(widget.imageUrl) as ImageProvider,
-                          child: _profileImage == null
-                              ? const Icon(Icons.camera_alt, size: 50)
-                              : null,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    TextFormField(
-                      controller: _nameController,
-                      decoration: const InputDecoration(
-                        labelText: 'Nama',
-                        border: OutlineInputBorder(),
-                      ),
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Nama tidak boleh kosong';
-                        }
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 8),
-                    TextFormField(
-                      controller: _dobController,
-                      decoration: const InputDecoration(
-                        labelText: 'Tanggal Lahir',
-                        border: OutlineInputBorder(),
-                      ),
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Tanggal Lahir tidak boleh kosong';
-                        }
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 8),
-                    TextFormField(
-                      controller: _phoneController,
-                      decoration: const InputDecoration(
-                        labelText: 'Nomor HP',
-                        border: OutlineInputBorder(),
-                      ),
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Nomor HP tidak boleh kosong';
-                        }
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 8),
-                   
-                    TextFormField(
-                      controller: _genderController,
-                      decoration: const InputDecoration(
-                        labelText: 'Jenis Kelamin',
-                        border: OutlineInputBorder(),
-                      ),
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Jenis Kelamin tidak boleh kosong';
-                        }
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 8),
-                    TextFormField(
-                      controller: _addressController,
-                      decoration: const InputDecoration(
-                        labelText: 'Alamat',
-                        border: OutlineInputBorder(),
-                      ),
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Alamat tidak boleh kosong';
-                        }
-                        return null;
-                      },
-                    ),
-                    if (_errorMessage.isNotEmpty)
-                      Padding(
-                        padding: const EdgeInsets.all(8.0),
-                        child: Text(
-                          _errorMessage,
-                          style: TextStyle(color: Colors.red),
-                        ),
-                      ),
-                  ],
+        child: Form(
+          key: _formKey,
+          child: ListView(
+            children: [
+              Center(
+                child: GestureDetector(
+                  onTap: _pickImage,
+                  child: CircleAvatar(
+                    radius: 50,
+                    backgroundColor: Colors.grey[200],
+                    backgroundImage: _profileImage != null
+                        ? FileImage(_profileImage!)
+                        : _imageUrl.isNotEmpty
+                            ? NetworkImage(_imageUrl)
+                            : AssetImage('assets/images/person/login.png') as ImageProvider,
+                    child: _profileImage == null && _imageUrl.isEmpty
+                        ? const Icon(Icons.camera_alt, size: 50)
+                        : null,
+                  ),
                 ),
-              );
-            }
-          },
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _nameController,
+                decoration: const InputDecoration(
+                  labelText: 'Name',
+                  border: OutlineInputBorder(),
+                ),
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Name cannot be empty';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 8),
+              TextFormField(
+                controller: _dobController,
+                decoration: const InputDecoration(
+                  labelText: 'Date of Birth',
+                  border: OutlineInputBorder(),
+                ),
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Date of Birth cannot be empty';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 8),
+              TextFormField(
+                controller: _phoneController,
+                decoration: const InputDecoration(
+                  labelText: 'Phone Number',
+                  border: OutlineInputBorder(),
+                ),
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Phone Number cannot be empty';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 8),
+              TextFormField(
+                controller: _genderController,
+                decoration: const InputDecoration(
+                  labelText: 'Gender',
+                  border: OutlineInputBorder(),
+                ),
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Gender cannot be empty';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 8),
+              TextFormField(
+                controller: _addressController,
+                decoration: const InputDecoration(
+                  labelText: 'Address',
+                  border: OutlineInputBorder(),
+                ),
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Address cannot be empty';
+                  }
+                  return null;
+                },
+              ),
+              if (_errorMessage.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.all(8.0),
+                  child: Text(
+                    _errorMessage,
+                    style: TextStyle(color: Colors.red),
+                  ),
+                ),
+            ],
+          ),
         ),
       ),
     );
